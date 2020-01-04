@@ -1,0 +1,66 @@
+---
+title: "Midcapstone_process"
+author: "Brittany"
+date: "1/4/2020"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(timeDate)
+```
+
+
+Read in grammy and billboard dataset - Grammys range from 1959-2019, Billboard range from August 1958 to June 2019. 
+```{r}
+grammy <- read_csv("~/Documents/nss_data_science/Midcapstone/data/grammy.csv")
+billboard <- read_csv("~/Documents/nss_data_science/Midcapstone/data/billboard.csv")
+```
+
+Keep only Grammy General Fields (Big Four)
+```{r}
+grammy = filter(grammy, (category %in% c("Record Of The Year", "Album Of The Year","Song Of The Year","Best New Artist")))  %>%
+  rename(Performer = 'name', Song = 'awardFor')
+```
+
+Remove columns from Billboard
+```{r}
+billboard <- billboard %>% 
+  select(-c('SongID','Instance','Peak Position', 'Weeks on Chart', 'X10', 'X11','X12','X13','X14','X15','X16','X17','X18'))
+```
+
+Create "position difference" column with Billboard position changes
+```{r}
+billboard$'Week Position Difference' <- billboard$'Week Position' - billboard$'Previous Week Position'
+```
+
+Create "year" column in Grammy dataset
+```{r}
+grammy$year <- 1958 + grammy$annualGrammy
+```
+
+Convert Billboard "WeekID" column to date
+```{r}
+billboard$WeekID <- as.Date(billboard$WeekID , "%m/%d/%Y")
+```
+
+Create Grammy_artist dataset for Best New Artist category
+```{r}
+grammy_artist <- filter(grammy, (category %in% ("Best New Artist")))
+```
+
+Create Grammy_music dataset for Record of the Year and Album of the Year categories
+```{r}
+grammy_music <- filter(grammy, (category %in% c("Record Of The Year","Album Of The Year")))
+```
+
+Merge Billboard and grammy_music
+```{r}
+music_merge <- merge(x=grammy_music,y=billboard,by=c("Performer","Song"),all.x=TRUE)
+```
+
+Merge Billboard with grammy_artist
+```{r}
+artist_merge <- merge(x=grammy_artist,y=billboard,by="Performer",all.x=TRUE)
+```
