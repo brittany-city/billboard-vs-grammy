@@ -1,5 +1,5 @@
 ---
-title: "Midcapstone_process"
+title: "Billboard versus Grammy "
 author: "Brittany"
 date: "1/4/2020"
 output: html_document
@@ -9,30 +9,42 @@ output: html_document
 library(tidyverse)
 library(lubridate)
 library(timeDate)
+library(ggplot2)
 ```
 
 
 Read in grammy and billboard dataset - Grammys range from 1959-2019, Billboard range from August 1958 to June 2019. 
 ```{r}
-grammy <- read_csv("~/Documents/nss_data_science/Midcapstone/data/grammy.csv")
-billboard <- read_csv("~/Documents/nss_data_science/Midcapstone/data/billboard.csv")
+grammy <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/grammy.csv")
+billboard <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/billboard.csv")
 ```
 
 Keep only Grammy General Fields (Big Four)
 ```{r}
 grammy = filter(grammy, (category %in% c("Record Of The Year", "Album Of The Year","Song Of The Year","Best New Artist")))  %>%
-  rename(Performer = 'name', Song = 'awardFor')
+  rename(Performer = 'name', Song = 'awardFor') %>%
+  select(-c('X5','X6'))
 ```
 
 Remove columns from Billboard
 ```{r}
 billboard <- billboard %>% 
-  select(-c('SongID','Instance','Peak Position', 'Weeks on Chart', 'X10', 'X11','X12','X13','X14','X15','X16','X17','X18'))
+  select(-c('SongID','Peak Position', 'Weeks on Chart', 'X10', 'X11','X12','X13','X14','X15','X16','X17','X18'))
 ```
 
 Create "position difference" column with Billboard position changes
 ```{r}
 billboard$'Week Position Difference' <- billboard$'Week Position' - billboard$'Previous Week Position'
+```
+
+To fix NA values in the merged dataset, edit the Performer name to match in merge
+```{r}
+billboard <- billboard %>%
+  mutate(Performer = str_replace(Performer, "Macklemore & Ryan Lewis Featuring Eric Nally, Melle Mel, Kool Moe Dee & Grandmaster Caz","Macklemore & Ryan Lewis")) %>% 
+  mutate(Performer = str_replace(Performer, "Macklemore & Ryan Lewis Featuring Mary Lambert","Macklemore & Ryan Lewis")) %>%
+  mutate(Performer = str_replace(Performer, "Macklemore & Ryan Lewis Featuring Ray Dalton", "Macklemore & Ryan Lewis")) %>%
+  mutate(Performer = str_replace(Performer, "Macklemore & Ryan Lewis Featuring ScHoolboy Q & Hollis", "Macklemore & Ryan Lewis")) %>%
+  mutate(Performer = str_replace(Performer, "Macklemore & Ryan Lewis Featuring Wanz", "Macklemore & Ryan Lewis"))
 ```
 
 Create "year" column in Grammy dataset
@@ -52,10 +64,10 @@ grammy_artist <- filter(grammy, (category %in% ("Best New Artist")))
 
 Create Grammy_music dataset for Record of the Year and Album of the Year categories
 ```{r}
-grammy_music <- filter(grammy, (category %in% c("Record Of The Year","Album Of The Year")))
+grammy_music <- filter(grammy, (category %in% c("Record Of The Year","Album Of The Year","Song Of The Year")))
 ```
 
-Merge Billboard and grammy_music
+Merge Billboard with grammy_music
 ```{r}
 music_merge <- merge(x=grammy_music,y=billboard,by=c("Performer","Song"),all.x=TRUE)
 ```
@@ -63,4 +75,33 @@ music_merge <- merge(x=grammy_music,y=billboard,by=c("Performer","Song"),all.x=T
 Merge Billboard with grammy_artist
 ```{r}
 artist_merge <- merge(x=grammy_artist,y=billboard,by="Performer",all.x=TRUE)
+```
+
+Remove annualGrammy from grammy dataset
+```{r}
+grammy <- grammy %>% select(-c('annualGrammy'))
+```
+
+Test filter
+```{r}
+grammy_filter <- grammy %>%
+            filter(year == 2019)
+```
+
+Remove duplicate Song of the Year row
+```{r}
+grammy <- grammy[-c(39,40,41),]
+```
+
+Time series example
+```{r}
+filteredMusic <- music_merge %>%
+  filter(year == 2019) %>%
+  filter(category == "Song Of The Year")
+```
+
+```{r}
+qplot(x=filteredMusic$WeekID, y=filteredMusic$`Week Position`,
+    main="Billboard Chart Movement",
+    xlab="Week", ylab="Week Position")
 ```
