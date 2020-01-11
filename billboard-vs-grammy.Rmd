@@ -62,19 +62,84 @@ Create Grammy_artist dataset for Best New Artist category
 grammy_artist <- filter(grammy, (category %in% ("Best New Artist")))
 ```
 
-Create Grammy_music dataset for Record of the Year and Album of the Year categories
+Create Grammy_music dataset for Record of the Year and Song of the Year categories
 ```{r}
-grammy_music <- filter(grammy, (category %in% c("Record Of The Year","Album Of The Year","Song Of The Year")))
+grammy_song <- filter(grammy, (category %in% c("Record Of The Year","Song Of The Year")))
+```
+
+Create Grammy_album dataset for Album of the Year categories
+```{r}
+grammy_album <- filter(grammy, (category %in% c("Album Of The Year")))
 ```
 
 Merge Billboard with grammy_music
 ```{r}
-music_merge <- merge(x=grammy_music,y=billboard,by=c("Performer","Song"),all.x=TRUE)
+song_merge <- merge(x=grammy_song,y=billboard,by=c("Performer","Song"),all.x=TRUE)
 ```
 
 Merge Billboard with grammy_artist
 ```{r}
 artist_merge <- merge(x=grammy_artist,y=billboard,by="Performer",all.x=TRUE)
+```
+
+Merge Billboard with grammy_album
+```{r}
+album_merge <- merge(x=grammy_album,y=billboard,by="Performer",all.x=TRUE)
+```
+
+Create billboard_album with billboard hits and album name
+```{r}
+billboard_album <- billboard
+```
+Add empty column to billboard_album to add album names
+```{r}
+billboard_album$album <- NA
+```
+
+Fill album rows
+```{r}
+fill_album <- function(df, song, album_name){
+  df %>% mutate(album = if_else(Song == song, album_name, album))
+}
+```  
+
+```{r}
+billboard_album %>% fill_album('By The Time I Get To Phoenix', 'By The Time I Get To Phoenix') %>% View()
+
+```
+
+```{r}
+billboard_album$album <- ifelse(billboard_album$Song == 'By The Time I Get To Phoenix', 'By The Time I Get To Phoenix', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Hey Little One', 'By The Time I Get To Phoenix', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'So Far Away/Smackwater Jack', 'Tapestry', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Bangla-Desh/Deep Blue', 'The Concert For Bangla Desh', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "My Sweet Lord/Isn't It A Pity", 'The Concert For Bangla Desh', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Higher Ground', 'Innervisions', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Living For The City', 'Innervisions', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Boogie On Reggae Woman', "Fulfillingness' First Finale", NA)	
+billboard_album$album <- ifelse(billboard_album$Song == "You Haven't Done Nothin", "Fulfillingness' First Finale", NA)
+billboard_album$album <- ifelse(billboard_album$Song == '50 Ways To Leave Your Lover', 'Still Crazy After All These Years', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "Slip Slidin' Away", 'Still Crazy After All These Years', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'I Wish', 'Songs In The Key Of Life', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "Sir Duke", 'Songs In The Key Of Life', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'It Was A Very Good Year', 'Innervisions', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "Sgt. Pepper's Lonely Hearts Club Band/With A Little Help From My Friends", "Sgt. Pepper's Lonely Hearts Club Band", NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'My Way', "A Man And His Music", NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Still Crazy After All These Years', 'Still Crazy After All These Years', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "Say You'll Be Mine", 'Christopher Cross', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Never Be The Same', 'Christopher Cross', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Sailing', 'Christopher Cross', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "Ride Like The Wind", 'Christopher Cross', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Watching The Wheels', 'Double Fantasy', NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Woman', 'Double Fantasy', NA)
+billboard_album$album <- ifelse(billboard_album$Song == '(Just Like) Starting Over', "Double Fantasy", NA)	
+billboard_album$album <- ifelse(billboard_album$Song == "Thriller", "Thriller", NA)
+billboard_album$album <- ifelse(billboard_album$Song == 'Billie Jean', 'Thriller', NA)
+billboard_album$album <- ifelse(billboard_album$Song == "P.Y.T. (Pretty Young Thing)", 'Thriller', NA)
+```
+```{r}
+billboard_album$album <- billboard_album %>%
+  mutateifelse(billboard_album$Song == 'Billie Jean', 'Thriller', NA)
 ```
 
 Remove annualGrammy from grammy dataset
@@ -95,13 +160,13 @@ grammy <- grammy[-c(39,40,41),]
 
 Time series example
 ```{r}
-filteredMusic <- music_merge %>%
+filteredSong <- song_merge %>%
   filter(year == 2019) %>%
   filter(category == "Song Of The Year")
 ```
 
 ```{r}
-qplot(x=filteredMusic$WeekID, y=filteredMusic$`Week Position`,
+qplot(x=filteredSong$WeekID, y=filteredSong$`Week Position`,
     main="Billboard Chart Movement",
     xlab="Week", ylab="Week Position")
 ```
