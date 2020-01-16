@@ -2,39 +2,60 @@
 title: "Billboard versus Grammy "
 author: "Brittany"
 date: "1/4/2020"
-output: html_document
----
+output: html_document 
+---    
+
+DATA IMPORT AND CLEANING
 
 ```{r}
 library(tidyverse)
 library(lubridate)
 library(timeDate)
 library(ggplot2)
+library(reshape2)
 ```
 
 
 Read in grammy and billboard dataset - Grammys range from 1959-2019, Billboard range from August 1958 to June 2019. 
 ```{r}
-grammy <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/grammy.csv")
+grammy <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/grammy_wins.csv")
 billboard <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/billboard.csv")
 ```
-
 Keep only Grammy General Fields (Big Four)
 ```{r}
 grammy = filter(grammy, (category %in% c("Record Of The Year", "Album Of The Year","Song Of The Year","Best New Artist")))  %>%
-  rename(Performer = 'name', Song = 'awardFor') %>%
-  select(-c('X5','X6'))
+  select(-c('awardType'))
+```
+
+```{r}
+grammy[grammy$Performer == "Bette Midler", "Ethnicity"] <- "White"                   
+```
+
+Add "year" column in Grammy dataset
+```{r}
+grammy$year <- 1958 + grammy$annualGrammy
+```
+
+Add "award_date" column in Grammy dataset
+```{r}
+grammy$award_date <- lubridate::ymd(grammy$year, truncated = 2L)
+```
+
+Add "cutoff_date" column in Grammy dataset
+```{r}
+grammy$award_date <- as.Date(grammy$award_date, "%m/%d/%Y")
+grammy$cutoff_date <- as.Date(grammy$award_date) %m-% months(4)
 ```
 
 Remove columns from Billboard
 ```{r}
 billboard <- billboard %>% 
-  select(-c('SongID','Peak Position', 'Weeks on Chart', 'X10', 'X11','X12','X13','X14','X15','X16','X17','X18'))
+  select(-c('url','SongID','Previous Week Position', 'Peak Position','Weeks on Chart'))
 ```
 
-Create "position difference" column with Billboard position changes
+Convert Billboard "WeekID" column to date
 ```{r}
-billboard$'Week Position Difference' <- billboard$'Week Position' - billboard$'Previous Week Position'
+billboard$WeekID <- as.Date(billboard$WeekID , "%m/%d/%Y")
 ```
 
 To fix NA values in the merged dataset, edit the Performer name to match in merge
@@ -47,126 +68,73 @@ billboard <- billboard %>%
   mutate(Performer = str_replace(Performer, "Macklemore & Ryan Lewis Featuring Wanz", "Macklemore & Ryan Lewis"))
 ```
 
-Create "year" column in Grammy dataset
-```{r}
-grammy$year <- 1958 + grammy$annualGrammy
-```
-
-Convert Billboard "WeekID" column to date
-```{r}
-billboard$WeekID <- as.Date(billboard$WeekID , "%m/%d/%Y")
-```
-
-Create Grammy_artist dataset for Best New Artist category
+Merge Grammy Artist with Billboard datasets
 ```{r}
 grammy_artist <- filter(grammy, (category %in% ("Best New Artist")))
+grammy_artist <- merge(x=grammy_artist, y=billboard, by=c("Performer"), all.x=TRUE) %>%
+  select(-c('Song.x')) %>%
+  rename(Song = 'Song.y')
 ```
 
-Create Grammy_music dataset for Record of the Year and Song of the Year categories
+Merge Grammy Album and Song with Billboard datasets
 ```{r}
-grammy_song <- filter(grammy, (category %in% c("Record Of The Year","Song Of The Year")))
+grammy_album_song <- filter(grammy, (category %in% c("Album Of The Year","Record Of The Year","Song Of The Year")))
+grammy_album_song <- merge(x=grammy_album_song,y=billboard,by=c("Performer","Song"), all.x=TRUE)
 ```
 
-Create Grammy_album dataset for Album of the Year categories
+Stack grammy_artist and grammy_album_song to create one dataset
 ```{r}
-grammy_album <- filter(grammy, (category %in% c("Album Of The Year")))
+grammy_billboard <- rbind(grammy_artist, grammy_album_song)
 ```
 
-Merge Billboard with grammy_music
-```{r}
-song_merge <- merge(x=grammy_song,y=billboard,by=c("Performer","Song"),all.x=TRUE)
-```
-
-Merge Billboard with grammy_artist
-```{r}
-artist_merge <- merge(x=grammy_artist,y=billboard,by="Performer",all.x=TRUE)
-```
-
-Merge Billboard with grammy_album
-```{r}
-album_merge <- merge(x=grammy_album,y=billboard,by="Performer",all.x=TRUE)
-```
-
-Create billboard_album with billboard hits and album name
-```{r}
-billboard_album <- billboard
-```
-Add empty column to billboard_album to add album names
-```{r}
-billboard_album$album <- NA
-```
-
-Fill album rows
-```{r}
-fill_album <- function(df, song, album_name){
-  df %>% mutate(album = if_else(Song == song, album_name, album))
-}
-```  
-
-```{r}
-billboard_album %>% fill_album('By The Time I Get To Phoenix', 'By The Time I Get To Phoenix') %>% View()
-
-```
-
-```{r}
-billboard_album$album <- ifelse(billboard_album$Song == 'By The Time I Get To Phoenix', 'By The Time I Get To Phoenix', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Hey Little One', 'By The Time I Get To Phoenix', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'So Far Away/Smackwater Jack', 'Tapestry', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Bangla-Desh/Deep Blue', 'The Concert For Bangla Desh', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "My Sweet Lord/Isn't It A Pity", 'The Concert For Bangla Desh', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Higher Ground', 'Innervisions', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Living For The City', 'Innervisions', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Boogie On Reggae Woman', "Fulfillingness' First Finale", NA)	
-billboard_album$album <- ifelse(billboard_album$Song == "You Haven't Done Nothin", "Fulfillingness' First Finale", NA)
-billboard_album$album <- ifelse(billboard_album$Song == '50 Ways To Leave Your Lover', 'Still Crazy After All These Years', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "Slip Slidin' Away", 'Still Crazy After All These Years', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'I Wish', 'Songs In The Key Of Life', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "Sir Duke", 'Songs In The Key Of Life', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'It Was A Very Good Year', 'Innervisions', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "Sgt. Pepper's Lonely Hearts Club Band/With A Little Help From My Friends", "Sgt. Pepper's Lonely Hearts Club Band", NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'My Way', "A Man And His Music", NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Still Crazy After All These Years', 'Still Crazy After All These Years', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "Say You'll Be Mine", 'Christopher Cross', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Never Be The Same', 'Christopher Cross', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Sailing', 'Christopher Cross', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "Ride Like The Wind", 'Christopher Cross', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Watching The Wheels', 'Double Fantasy', NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Woman', 'Double Fantasy', NA)
-billboard_album$album <- ifelse(billboard_album$Song == '(Just Like) Starting Over', "Double Fantasy", NA)	
-billboard_album$album <- ifelse(billboard_album$Song == "Thriller", "Thriller", NA)
-billboard_album$album <- ifelse(billboard_album$Song == 'Billie Jean', 'Thriller', NA)
-billboard_album$album <- ifelse(billboard_album$Song == "P.Y.T. (Pretty Young Thing)", 'Thriller', NA)
-```
-```{r}
-billboard_album$album <- billboard_album %>%
-  mutateifelse(billboard_album$Song == 'Billie Jean', 'Thriller', NA)
-```
-
-Remove annualGrammy from grammy dataset
-```{r}
-grammy <- grammy %>% select(-c('annualGrammy'))
-```
+PLOTS FOR R SHINY APP
 
 Test filter
 ```{r}
-grammy_filter <- grammy %>%
+grammy_filter <- grammy_billboard %>%
             filter(year == 2019)
 ```
 
-Remove duplicate Song of the Year row
-```{r}
-grammy <- grammy[-c(39,40,41),]
-```
 
 Time series example
 ```{r}
-filteredSong <- song_merge %>%
+filter <- grammy_billboard %>%
   filter(year == 2019) %>%
-  filter(category == "Song Of The Year")
+  filter(category == "Record Of The Year")
 ```
 
 ```{r}
-qplot(x=filteredSong$WeekID, y=filteredSong$`Week Position`,
-    main="Billboard Chart Movement",
-    xlab="Week", ylab="Week Position")
+ggplot(filteredSong, aes(x = filteredSong$WeekID, y = filteredSong$'Week Position')) + geom_point(aes(color = filteredSong$Song)) + geom_vline(aes(xintercept=(filteredSong$award_date[1])),linetype=8, colour="black") + geom_vline(aes(xintercept=(filteredSong$cutoff_date[1])),linetype=5, colour="red") + xlab("WeekID") + ylab("Week Position") + scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredSong$WeekID, "%m-%Y")))
+```
+
+
+```{r}
+filteredAlbum <- grammy_billboard %>%
+  filter(year == 1978) %>%
+  filter(category == "Album Of The Year")
+```
+
+```{r}
+ggplot(filteredAlbum, aes(x = filteredAlbum$WeekID, y = filteredAlbum$'Week Position')) + geom_point(aes(color = filteredAlbum$Song)) + geom_vline(aes(xintercept=(filteredAlbum$award_date[1])),linetype=8, colour="black") + geom_vline(aes(xintercept=(filteredAlbum$cutoff_date[1])),linetype=5, colour="red") + xlab("WeekID") + ylab("Week Position") + scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredAlbum$WeekID, "%m-%Y")))
+```
+
+
+ANALYSIS
+```{r}
+
+grammy_Ethnic <- 
+  grammy %>%
+   group_by(Ethnicity,Performer) %>%
+   count(category, sort = TRUE)
+  
+
+ggplot(as.data.frame(grammy_Ethnic), aes(factor(Ethnicity), n, fill = category)) +     
+  geom_col() + xlab("Performer Ethnicity") + ylab("Grammy Awards") + scale_fill_discrete(name = "Award Category")
+  #ggplot(grammy, aes(fill=category, x=Ethnicity, y=Song)) + 
+    #geom_bar(position="stack", stat="identity")
+  #summarize(counts=n()) %>%
+  #arrange(-counts)
+  
+ # mutate(WeekID = fct_reorder(WeekID, n, .desc = TRUE)) %>%
+  #ggplot(aes(x=grammy_billboard$Ethnicity, y=n, fill=grammy_billboard$category)) + geom_bar(stat="identity")
 ```
