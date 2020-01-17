@@ -13,6 +13,7 @@ library(lubridate)
 library(timeDate)
 library(ggplot2)
 library(reshape2)
+library(dplyr)
 ```
 
 
@@ -87,6 +88,17 @@ Stack grammy_artist and grammy_album_song to create one dataset
 grammy_billboard <- rbind(grammy_artist, grammy_album_song)
 ```
 
+```{r}
+#grammy_billboard$cutoff_ym <- format(as.Date(grammy_billboard$cutoff_date), "%Y-%m") 
+#billboard$cutoff_ym <- format(as.Date(billboard$WeekID), "%Y-%m")
+```
+
+```{r}
+#billboard_no_grammy <- grammy_billboard %>%
+  #rename(Performer = 'Performer.x', WeekID = 'WeekID.x', 'Week Position' = 'Week Position.x',Song='Song.x',
+         #Instance = 'Instance.x')
+```
+
 PLOTS FOR R SHINY APP
 
 Test filter
@@ -118,6 +130,25 @@ filteredAlbum <- grammy_billboard %>%
 ggplot(filteredAlbum, aes(x = filteredAlbum$WeekID, y = filteredAlbum$'Week Position')) + geom_point(aes(color = filteredAlbum$Song)) + geom_vline(aes(xintercept=(filteredAlbum$award_date[1])),linetype=8, colour="black") + geom_vline(aes(xintercept=(filteredAlbum$cutoff_date[1])),linetype=5, colour="red") + xlab("WeekID") + ylab("Week Position") + scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredAlbum$WeekID, "%m-%Y")))
 ```
 
+```{r}
+#ethnic_order <- c('White','Black','Latino','Mixed')
+
+#grammy_Ethnic <- 
+  grammy %>%
+  group_by(Ethnicity,category) %>%
+  summarise(n_distinct(Performer)) %>%
+
+#grammy_Ethnic <- as_tibble(grammy_Ethnic)
+#grammy_Ethnic$`n_distinct(Performer)` <- as.numeric(as.character(grammy_Ethnic$`n_distinct(Performer)`))
+
+ggplot(grammy_Ethnic, mapping=aes(x=Ethnicity,y='n_distinct(Performer)',fill=category)) + geom_bar(stat="identity") + xlab("Performer Ethnicity") + ylab("Grammy Awards")
+```
+
+```{r}
+grammy_genre <- grammy %>%
+  group_by(Ethnicity,Genre) %>%
+  summarise(n_distinct(Performer))
+```
 
 ANALYSIS
 ```{r}
@@ -125,16 +156,65 @@ ANALYSIS
 grammy_Ethnic <- 
   grammy %>%
    group_by(Ethnicity,Performer) %>%
-   count(category, sort = TRUE)
+   count(n_distinct(category), sort = TRUE)
   
 
 ggplot(as.data.frame(grammy_Ethnic), aes(factor(Ethnicity), n, fill = category)) +     
   geom_col() + xlab("Performer Ethnicity") + ylab("Grammy Awards") + scale_fill_discrete(name = "Award Category")
-  #ggplot(grammy, aes(fill=category, x=Ethnicity, y=Song)) + 
-    #geom_bar(position="stack", stat="identity")
-  #summarize(counts=n()) %>%
-  #arrange(-counts)
+```
+
+```{r}
+
+grammy_genre <- 
+  grammy %>%
+   group_by(Genre,Performer) %>%
+   count(category, sort = TRUE)
   
- # mutate(WeekID = fct_reorder(WeekID, n, .desc = TRUE)) %>%
-  #ggplot(aes(x=grammy_billboard$Ethnicity, y=n, fill=grammy_billboard$category)) + geom_bar(stat="identity")
+
+ggplot(as.data.frame(grammy_genre), aes(factor(genre), n, fill = category)) +     
+  geom_col() + xlab("Performer Ethnicity") + ylab("Grammy Awards") + scale_fill_discrete(name = "Award Category")
+```
+
+
+```{r}
+filteredGeorge <- grammy_billboard %>%
+  filter(year == 1989) %>%
+  filter(category == "Album Of The Year")
+```
+
+```{r}
+ggplot(filteredGeorge, aes(x = filteredGeorge$WeekID, y = filteredGeorge$'Week Position')) + geom_point(aes(color = filteredGeorge$Song)) + geom_vline(aes(xintercept=(filteredGeorge$award_date[1])),linetype=8, colour="black") + geom_vline(aes(xintercept=(filteredGeorge$cutoff_date[1])),linetype=5, colour="red") + xlab("WeekID") + ylab("Week Position") + scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredGeorge$WeekID, "%m-%Y")))
+ggsave("myplot.png")
+```
+
+```{r}
+filteredGeorge <- grammy_billboard %>%
+  filter(year == 1989) %>%
+  filter(category == "Album Of The Year")
+```
+
+```{r}
+ggplot(filteredGeorge, aes(x = filteredGeorge$WeekID, y = filteredGeorge$'Week Position')) + geom_point(aes(color = filteredGeorge$Song)) + geom_vline(aes(xintercept=(filteredGeorge$award_date[1])),linetype=8, colour="black") + geom_vline(aes(xintercept=(filteredGeorge$cutoff_date[1])),linetype=5, colour="red") + xlab("WeekID") + ylab("Week Position") + scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredGeorge$WeekID, "%m-%Y")))
+ggsave("myplot.png")
+```
+
+```{r}
+filteredWhitney <- grammy_billboard %>%
+  filter(year == 1994) %>%
+  filter(category == "Record Of The Year")
+``` 
+
+```{r}
+ggplot(filteredWhitney, aes(x = filteredWhitney$WeekID, y = filteredWhitney$'Week Position')) + geom_point(aes(color = filteredWhitney$Song)) + geom_vline(aes(xintercept=(filteredWhitney$award_date[1])),linetype=8, colour="black") + geom_vline(aes(xintercept=(filteredWhitney$cutoff_date[1])),linetype=5, colour="red") + xlab("WeekID") + ylab("Week Position") + scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredWhitney$WeekID, "%m-%Y")))
+ggsave("whitney.png")
+```
+
+```{r}
+performer_billboard <- grammy_billboard %>%
+  select(c('Performer','WeekID'))
+```
+
+
+```{r}
+if (is.na(grammy_billboard$WeekID[12334])) print("no song on Billboard Hot 100") else print("song on Billboard Hot 100")
 ```
