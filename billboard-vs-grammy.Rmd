@@ -14,12 +14,13 @@ library(timeDate)
 library(ggplot2)
 library(reshape2)
 library(dplyr)
+library(plotly)
 ```
 
 
 Read in grammy and billboard dataset - Grammys range from 1959-2019, Billboard range from August 1958 to June 2019. 
 ```{r}
-grammy <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/grammy_wins.csv")
+grammy <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/grammy-wins.csv")
 billboard <- read_csv("~/Documents/nss_data_science/billboard-vs-grammy/data/billboard.csv")
 ```
 Keep only Grammy General Fields (Big Four)
@@ -29,7 +30,9 @@ grammy = filter(grammy, (category %in% c("Record Of The Year", "Album Of The Yea
 ```
 
 ```{r}
-grammy[grammy$Performer == "Bette Midler", "Ethnicity"] <- "White"                   
+grammy[grammy$Performer == "Bette Midler", "Ethnicity"] <- "White"  
+billboard[billboard$Performer == "Lil Nas X Featuring Billy Ray Cyrus", "Performer"] <- "Lil Nas X"
+billboard[billboard$Performer == "Lil Nas X & Cardi B", "Performer"] <- "Lil Nas X"
 ```
 
 Add "year" column in Grammy dataset
@@ -46,6 +49,7 @@ Add "cutoff_date" column in Grammy dataset
 ```{r}
 grammy$award_date <- as.Date(grammy$award_date, "%m/%d/%Y")
 grammy$cutoff_date <- as.Date(grammy$award_date) %m-% months(4)
+billboard$cutoff_date <- "2019-08-31"
 ```
 
 Remove columns from Billboard
@@ -156,10 +160,10 @@ ANALYSIS
 grammy_Ethnic <- 
   grammy %>%
    group_by(Ethnicity,Performer) %>%
+  unique() %>%
    count(n_distinct(category), sort = TRUE)
-  
 
-ggplot(as.data.frame(grammy_Ethnic), aes(factor(Ethnicity), n, fill = category)) +     
+ggplot(as.data.frame(grammy_Ethnic, aes(x=ethnicity, y=n, fill = category))) +     
   geom_col() + xlab("Performer Ethnicity") + ylab("Grammy Awards") + scale_fill_discrete(name = "Award Category")
 ```
 
@@ -218,3 +222,127 @@ performer_billboard <- grammy_billboard %>%
 ```{r}
 if (is.na(grammy_billboard$WeekID[12334])) print("no song on Billboard Hot 100") else print("song on Billboard Hot 100")
 ```
+
+```{r}
+grammy_billboard[is_empty(grammy_billboard)] = NA
+grammy_billboard$Instance[is.na(grammy_billboard$Instance)]<-0
+```
+
+
+```{r}
+instance <- grammy_billboard %>%
+  group_by(Performer) %>%
+  unique() %>%
+  tally((Instance))
+            
+```
+
+```{r}
+grammys <- grammy_billboard %>%
+  group_by(Performer) %>%
+  unique() %>%
+  count(n_distinct(category))
+```
+
+```{r}
+aoty <- grammy %>%
+  select(c("Performer","category")) %>%
+  unique() %>%
+  filter(category=="Album Of The Year")
+
+soty <- grammy %>%
+  select(c("Performer","category")) %>%
+  unique() %>%
+  filter(category=="Song Of The Year")
+
+roty <- grammy %>%
+  select(c("Performer","category")) %>%
+  unique() %>%
+  filter(category=="Record Of The Year")
+
+bna <- grammy %>%
+  select(c("Performer","category")) %>%
+  unique() %>%
+  filter(category=="Best New Artist")
+```
+
+```{r}
+category_merge <- merge(x=aoty,y=soty,by="Performer", all=TRUE) %>%
+  rename(aoty = 'category.x') %>%
+  rename(soty = 'category.y')
+category_merge <- merge(x=category_merge,y=roty,by="Performer", all = TRUE)
+category_merge <- category_merge %>%
+  rename(roty = 'category')
+category_merge <- merge(x=category_merge,y=bna,by="Performer", all = TRUE)
+category_merge <- category_merge %>%
+  rename(bna = 'category')
+category_merge[is.na(category_merge)] <- ""
+category_merge$categories <- paste(category_merge$aoty, category_merge$soty, category_merge$roty, category_merge$bna, sep = " ")
+```
+
+
+
+```{r}
+grammys_instance <- merge(x=instance, y=grammys, by="Performer") %>%
+  rename('Billboard Chart Instance' = "n.x") %>%
+  rename('Number of Grammy Awards' = "n_distinct(category)") %>%
+  select(-c("n.y"))
+```
+
+```{r}
+grammys_instance <- merge(x=grammys_instance, y=category_merge, by="Performer") 
+  group_by('Performer') %>%
+  unique()
+```
+
+
+```{r}
+grammys_instance[grammys_instance$Performer == "Adele Adkins", "Performer"] <- "Adele"
+grammys_instance[grammys_instance$Performer == "Barbra Streisand", "Performer"] <- "Barbara Streisand"
+grammys_instance[grammys_instance$Performer == "Bob Newhart", "Performer"] <- "Bob Newhart"
+grammys_instance[grammys_instance$Performer == "Bruno Mars", "Performer"] <- "Bruno Mars"
+grammys_instance[grammys_instance$Performer == "Carole King", "Performer"] <- "Carole King"
+
+d <- grammys_instance %>%
+  group_by(Performer) %>%
+  unique()
+```
+
+```{r}
+p <- d %>%
+  plot_ly(
+    type = 'scatter',
+    mode = 'markers',
+    y= d$"Billboard Chart Instance",
+    x= d$"Number of Grammy Awards",
+    text = d$Performer,
+    hovertemplate = paste(
+      "<b>%{text}</br><br><br>",
+      "Billboard Chart Instances: %{y:,.0f}<br>",
+      "Number of Grammys Awards: %{x:.0}<br>"
+    )
+  ) %>%
+  layout(p,
+         xaxis = list(title='Number of Grammy Awards per Performer', zeroline=TRUE),
+         yaxis = list(title='Billboard Chart Instances per Performer', range=c(0,1200))
+  )
+
+p
+```
+
+```{r}
+filteredAriana <- billboard %>%
+  filter(Song == c('7 Rings','Thank U, Next'))
+``` 
+
+```{r}
+as.Date(filteredAriana$cutoff_date[1])
+``` 
+
+```{r}
+ggplot(filteredAriana, aes(x = filteredAriana$WeekID, y = filteredAriana$'Week Position')) + geom_point(aes(color = filteredAriana$Song)) + xlab("WeekID") + ylab("Week Position") + geom_vline(aes(xintercept=(as.Date(filteredAriana$cutoff_date[1]))),linetype=5, colour="red") +
+scale_color_discrete(name = "Song") + scale_y_reverse() + scale_x_date(breaks=pretty(as.Date(filteredAriana$WeekID, "%m-%Y"))) + theme(legend.position="bottom")
+ggsave("Ariana_plot.png")
+```
+
+
