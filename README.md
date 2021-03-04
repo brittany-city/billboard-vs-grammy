@@ -16,5 +16,9 @@ Grammy nominees are selected by media companies and individual members registere
 * **Data Visualization**: Plotly
 * **Interactivitiy**: R Shiny
   
-#### Featured Deliverables
+## Featured Deliverables
 * R Shiny Dashboard: https://brittany-city.shinyapps.io/what-is-good-music/
+
+## Contact
+* Email: [cityofbrittany@gmail.com](cityofbrittany@gmail.com)
+* LinkedIn: [linkedin.com/in/brittanycity](https://www.linkedin.com/in/brittanycity/)
