@@ -10,7 +10,11 @@ Grammy nominees are selected by media companies and individual members registere
   2. Does song popularity guarantee Grammy glory?
   
 ## Methods & Technology
-
+**Language**: R
+**Data Format**: CSV
+**Data Processing**: Tidyverse, Dplyr, Ggplot2, Lubridate
+**Data Visualization**: Plotly
+**Interactivitiy**: R Shiny
   
 #### Featured Deliverables
-* https://brittany-city.shinyapps.io/what-is-good-music/
+* R Shiny Dashboard: https://brittany-city.shinyapps.io/what-is-good-music/
