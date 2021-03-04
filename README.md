@@ -2,6 +2,7 @@
 <b>Project Status: Complete</b>
 
 <b>Motivation</b> 
+
 Grammy nominees are selected by media companies and individual members registered with The Recording Academy (NARAS). The Billboard charts tabulate the relative weekly popularity of songs and albums in the U.S. and elsewhere. 
 
 <b>Research questions: </b>
